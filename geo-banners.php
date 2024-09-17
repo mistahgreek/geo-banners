@@ -2,12 +2,12 @@
 /*
 Plugin Name: Geo Banners
 Description: Display banners based on user geolocation using AJAX and shortcode or site-wide option.
-Version: 3.0.2
+Version: 3.0.5
 Author: Peter Panagiotis Floros
 Author URI: https://tawk.to/isodos
 */
 
-define('GEO_BANNERS_VERSION', '3.0.2');
+define('GEO_BANNERS_VERSION', '3.0.5');
 
 // List of countries
 function geo_banners_get_countries() {
@@ -264,52 +264,60 @@ function geo_banners_get_countries() {
 
 // Function to display the banner container based on country
 function geo_banners_shortcode_custom() {
+    // Check if the banner functionality is active
     if (get_option('geo_banners_active') != '1') {
         return ''; // Do not display anything if the banner is not active
     }
 
+    // Get stored options for desktop image, mobile image, and link URL
     $banner_image = get_option('geo_banners_image');
-    $banner_mobile_image = get_option('geo_banners_mobile_image'); // Fetch mobile image
-    $banner_link = get_option('geo_banners_image_link'); // Fetch banner link URL
-    $allowed_countries = get_option('geo_banners_allowed_countries', array()); // Get allowed countries
+    $banner_mobile_image = get_option('geo_banners_mobile_image');
+    $banner_link = get_option('geo_banners_image_link');
+    $allowed_countries = get_option('geo_banners_allowed_countries', array());
 
-    // Get user's country code from the GeoIP2 plugin
+    // Get the user's country code using the GeoIP plugin
     if (function_exists('geoip_detect2_get_info_from_current_ip')) {
         $location = geoip_detect2_get_info_from_current_ip();
         $user_country = $location->raw['country']['iso_code'];
     } else {
-        $user_country = ''; // Default if plugin is not available
+        $user_country = ''; // Default country code if GeoIP is not available
     }
 
-    // Check if user's country is in the allowed countries list
+    // Check if the user's country is in the allowed countries list
     if (in_array($user_country, $allowed_countries)) {
+        // Append a timestamp to bust cache for both desktop and mobile images
+        $banner_image .= $banner_image ? '?v=' . time() : '';
+        $banner_mobile_image .= $banner_mobile_image ? '?v=' . time() : '';
+
+        // Start building the HTML output
         $output = '<div id="geo-banner" class="geo-banner" style="display:none;">';
-        
-        // Check if a link is provided
+
+        // If a link is provided, wrap the images in an anchor tag
         if ($banner_link) {
             $output .= '<a href="' . esc_url($banner_link) . '" target="_blank">';
         }
-        
-        // Add desktop image
+
+        // Display desktop image if available
         if ($banner_image) {
-            $output .= '<div class="geo-banner-desktop"><img src="' . esc_url($banner_image) . '" alt="Geo Banner" /></div>';
-        }
-        
-        // Add mobile image
-        if ($banner_mobile_image) {
-            $output .= '<div class="geo-banner-mobile"><img src="' . esc_url($banner_mobile_image) . '" alt="Mobile Geo Banner" /></div>';
+            $output .= '<div class="geo-banner-desktop"><img src="' . esc_url($banner_image) . '" alt="Geo Banner"></div>';
         }
 
-        // Close the link tag if applicable
+        // Display mobile image if available
+        if ($banner_mobile_image) {
+            $output .= '<div class="geo-banner-mobile"><img src="' . esc_url($banner_mobile_image) . '" alt="Mobile Geo Banner"></div>';
+        }
+
+        // Close the anchor tag if a link is provided
         if ($banner_link) {
             $output .= '</a>';
         }
-        
+
         $output .= '</div>';
 
-        return $output;
+        return $output; // Return the banner HTML
     }
-    return ''; // Return nothing if no banner is set or country is not allowed
+
+    return ''; // Return nothing if the user's country is not allowed
 }
 add_shortcode('geo_banner_custom', 'geo_banners_shortcode_custom');
 
