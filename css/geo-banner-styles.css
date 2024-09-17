@@ -7,6 +7,28 @@
 }
 
 .geo-banner img {
-    max-width: 100%; /* Ensure the image adapts to the container */
+    max-width: 100%;
     height: auto;
+}
+
+/* Add specific styles for mobile */
+@media only screen and (max-width: 768px) {
+    .geo-banner-mobile {
+        display: block;
+    }
+
+    .geo-banner-desktop {
+        display: none;
+    }
+}
+
+/* Desktop display */
+@media only screen and (min-width: 769px) {
+    .geo-banner-mobile {
+        display: none;
+    }
+
+    .geo-banner-desktop {
+        display: block;
+    }
 }

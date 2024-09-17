@@ -9,11 +9,11 @@
 }
 
 .geo-banners-left {
-    width: 65%; /* Left column (settings) */
+    width: 65%;
 }
 
 .geo-banners-right {
-    width: 30%; /* Right column (instructions + IP info) */
+    width: 30%;
 }
 
 .geo-banners-settings .form-table {
@@ -41,16 +41,22 @@
 /* Media query for mobile responsiveness */
 @media only screen and (max-width: 768px) {
     .geo-banners-container {
-        display: block; /* Stack the columns vertically on small screens */
+        display: block;
     }
 
     .geo-banners-left,
     .geo-banners-right {
-        width: 100%; /* Set both columns to 100% width */
-        margin-bottom: 20px; /* Add space between sections */
+        width: 100%;
+        margin-bottom: 20px;
     }
 
     .geo-banners-settings textarea {
-        width: 100%!important; /* Ensure text areas are full width on mobile */
+        width: 100%!important;
     }
+}
+
+#geo_banners_mobile_image_preview,
+#geo_banners_desktop_image_preview {
+    max-width: 300px;
+    display: none;
 }
