@@ -3,7 +3,7 @@ Version: 3.0.0
 Author: Peter Panagiotis Floros
 Live Chat: Tawk.to Live Chat
 Support Website: Isodos Technology Partners
-
+------------------------------
 Table of Contents
 1. Introduction
 2. Installation & Activation
@@ -16,7 +16,8 @@ Table of Contents
 9. GeoIP Plugin Integration
 10. Documentation Access
 11. Contact & Support
-    
+------------------------------
+
 1. Introduction
 The Geo Banners Plugin allows administrators to display banners on their WordPress site based on a visitor's geolocation. Banners can be
 shown globally (site-wide) or only on specific pages using shortcodes. This plugin integrates seamlessly with GeoIP technology to detect the
