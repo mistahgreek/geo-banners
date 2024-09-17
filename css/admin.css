@@ -1,0 +1,56 @@
+/* Admin Panel Custom Styles */
+.geo-banners-settings {
+    margin-top: 20px;
+}
+
+.geo-banners-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.geo-banners-left {
+    width: 65%; /* Left column (settings) */
+}
+
+.geo-banners-right {
+    width: 30%; /* Right column (instructions + IP info) */
+}
+
+.geo-banners-settings .form-table {
+    width: 100%;
+}
+
+.geo-banners-settings textarea {
+    font-family: monospace!important;
+    width: 35%!important;
+    height: 110px!important;
+}
+
+.geo-banners-settings .button-primary {
+    margin-top: 10px;
+}
+
+.geo-instructions-box,
+.geo-location-box {
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    background-color: #f9f9f9;
+}
+
+/* Media query for mobile responsiveness */
+@media only screen and (max-width: 768px) {
+    .geo-banners-container {
+        display: block; /* Stack the columns vertically on small screens */
+    }
+
+    .geo-banners-left,
+    .geo-banners-right {
+        width: 100%; /* Set both columns to 100% width */
+        margin-bottom: 20px; /* Add space between sections */
+    }
+
+    .geo-banners-settings textarea {
+        width: 100%!important; /* Ensure text areas are full width on mobile */
+    }
+}

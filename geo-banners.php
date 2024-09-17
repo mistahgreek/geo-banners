@@ -1,0 +1,507 @@
+<?php
+/*
+Plugin Name: Geo Banners
+Description: Display banners based on user geolocation using AJAX and shortcode or site-wide option.
+Version: 3.0.0
+Author: Peter Panagiotis Floros
+Author URI: https://tawk.to/isodos
+*/
+
+define('GEO_BANNERS_VERSION', '3.0.0');
+
+// List of countries
+function geo_banners_get_countries() {
+    return array(
+        'AF' => 'Afghanistan',
+        'AL' => 'Albania',
+        'DZ' => 'Algeria',
+        'AS' => 'American Samoa',
+        'AD' => 'Andorra',
+        'AO' => 'Angola',
+        'AI' => 'Anguilla',
+        'AQ' => 'Antarctica',
+        'AG' => 'Antigua and Barbuda',
+        'AR' => 'Argentina',
+        'AM' => 'Armenia',
+        'AW' => 'Aruba',
+        'AU' => 'Australia',
+        'AT' => 'Austria',
+        'AZ' => 'Azerbaijan',
+        'BS' => 'Bahamas',
+        'BH' => 'Bahrain',
+        'BD' => 'Bangladesh',
+        'BB' => 'Barbados',
+        'BY' => 'Belarus',
+        'BE' => 'Belgium',
+        'BZ' => 'Belize',
+        'BJ' => 'Benin',
+        'BM' => 'Bermuda',
+        'BT' => 'Bhutan',
+        'BO' => 'Bolivia (Plurinational State of)',
+        'BQ' => 'Bonaire, Sint Eustatius and Saba',
+        'BA' => 'Bosnia and Herzegovina',
+        'BW' => 'Botswana',
+        'BR' => 'Brazil',
+        'IO' => 'British Indian Ocean Territory',
+        'BN' => 'Brunei Darussalam',
+        'BG' => 'Bulgaria',
+        'BF' => 'Burkina Faso',
+        'BI' => 'Burundi',
+        'CV' => 'Cabo Verde',
+        'KH' => 'Cambodia',
+        'CM' => 'Cameroon',
+        'CA' => 'Canada',
+        'KY' => 'Cayman Islands',
+        'CF' => 'Central African Republic',
+        'TD' => 'Chad',
+        'CL' => 'Chile',
+        'CN' => 'China',
+        'CX' => 'Christmas Island',
+        'CC' => 'Cocos (Keeling) Islands',
+        'CO' => 'Colombia',
+        'KM' => 'Comoros',
+        'CG' => 'Congo',
+        'CD' => 'Congo, Democratic Republic of the',
+        'CK' => 'Cook Islands',
+        'CR' => 'Costa Rica',
+        'CI' => 'Côte d\'Ivoire',
+        'HR' => 'Croatia',
+        'CU' => 'Cuba',
+        'CW' => 'Curaçao',
+        'CY' => 'Cyprus',
+        'CZ' => 'Czech Republic',
+        'DK' => 'Denmark',
+        'DJ' => 'Djibouti',
+        'DM' => 'Dominica',
+        'DO' => 'Dominican Republic',
+        'EC' => 'Ecuador',
+        'EG' => 'Egypt',
+        'SV' => 'El Salvador',
+        'GQ' => 'Equatorial Guinea',
+        'ER' => 'Eritrea',
+        'EE' => 'Estonia',
+        'SZ' => 'Eswatini',
+        'ET' => 'Ethiopia',
+        'FK' => 'Falkland Islands (Malvinas)',
+        'FO' => 'Faroe Islands',
+        'FJ' => 'Fiji',
+        'FI' => 'Finland',
+        'FR' => 'France',
+        'GF' => 'French Guiana',
+        'PF' => 'French Polynesia',
+        'TF' => 'French Southern Territories',
+        'GA' => 'Gabon',
+        'GM' => 'Gambia',
+        'GE' => 'Georgia',
+        'DE' => 'Germany',
+        'GH' => 'Ghana',
+        'GI' => 'Gibraltar',
+        'GR' => 'Greece',
+        'GL' => 'Greenland',
+        'GD' => 'Grenada',
+        'GP' => 'Guadeloupe',
+        'GU' => 'Guam',
+        'GT' => 'Guatemala',
+        'GG' => 'Guernsey',
+        'GN' => 'Guinea',
+        'GW' => 'Guinea-Bissau',
+        'GY' => 'Guyana',
+        'HT' => 'Haiti',
+        'HM' => 'Heard Island and McDonald Islands',
+        'VA' => 'Holy See',
+        'HN' => 'Honduras',
+        'HK' => 'Hong Kong',
+        'HU' => 'Hungary',
+        'IS' => 'Iceland',
+        'IN' => 'India',
+        'ID' => 'Indonesia',
+        'IR' => 'Iran (Islamic Republic of)',
+        'IQ' => 'Iraq',
+        'IE' => 'Ireland',
+        'IM' => 'Isle of Man',
+        'IL' => 'Israel',
+        'IT' => 'Italy',
+        'JM' => 'Jamaica',
+        'JP' => 'Japan',
+        'JE' => 'Jersey',
+        'JO' => 'Jordan',
+        'KZ' => 'Kazakhstan',
+        'KE' => 'Kenya',
+        'KI' => 'Kiribati',
+        'KP' => 'Korea (Democratic People\'s Republic of)',
+        'KR' => 'Korea, Republic of',
+        'KW' => 'Kuwait',
+        'KG' => 'Kyrgyzstan',
+        'LA' => 'Lao People\'s Democratic Republic',
+        'LV' => 'Latvia',
+        'LB' => 'Lebanon',
+        'LS' => 'Lesotho',
+        'LR' => 'Liberia',
+        'LY' => 'Libya',
+        'LI' => 'Liechtenstein',
+        'LT' => 'Lithuania',
+        'LU' => 'Luxembourg',
+        'MO' => 'Macao',
+        'MG' => 'Madagascar',
+        'MW' => 'Malawi',
+        'MY' => 'Malaysia',
+        'MV' => 'Maldives',
+        'ML' => 'Mali',
+        'MT' => 'Malta',
+        'MH' => 'Marshall Islands',
+        'MQ' => 'Martinique',
+        'MR' => 'Mauritania',
+        'MU' => 'Mauritius',
+        'YT' => 'Mayotte',
+        'MX' => 'Mexico',
+        'FM' => 'Micronesia (Federated States of)',
+        'MD' => 'Moldova, Republic of',
+        'MC' => 'Monaco',
+        'MN' => 'Mongolia',
+        'ME' => 'Montenegro',
+        'MS' => 'Montserrat',
+        'MA' => 'Morocco',
+        'MZ' => 'Mozambique',
+        'MM' => 'Myanmar',
+        'NA' => 'Namibia',
+        'NR' => 'Nauru',
+        'NP' => 'Nepal',
+        'NL' => 'Netherlands',
+        'NC' => 'New Caledonia',
+        'NZ' => 'New Zealand',
+        'NI' => 'Nicaragua',
+        'NE' => 'Niger',
+        'NG' => 'Nigeria',
+        'NU' => 'Niue',
+        'NF' => 'Norfolk Island',
+        'MK' => 'North Macedonia',
+        'MP' => 'Northern Mariana Islands',
+        'NO' => 'Norway',
+        'OM' => 'Oman',
+        'PK' => 'Pakistan',
+        'PW' => 'Palau',
+        'PS' => 'Palestine, State of',
+        'PA' => 'Panama',
+        'PG' => 'Papua New Guinea',
+        'PY' => 'Paraguay',
+        'PE' => 'Peru',
+        'PH' => 'Philippines',
+        'PN' => 'Pitcairn',
+        'PL' => 'Poland',
+        'PT' => 'Portugal',
+        'PR' => 'Puerto Rico',
+        'QA' => 'Qatar',
+        'RE' => 'Réunion',
+        'RO' => 'Romania',
+        'RU' => 'Russian Federation',
+        'RW' => 'Rwanda',
+        'BL' => 'Saint Barthélemy',
+        'SH' => 'Saint Helena, Ascension and Tristan da Cunha',
+        'KN' => 'Saint Kitts and Nevis',
+        'LC' => 'Saint Lucia',
+        'MF' => 'Saint Martin (French part)',
+        'PM' => 'Saint Pierre and Miquelon',
+        'VC' => 'Saint Vincent and the Grenadines',
+        'WS' => 'Samoa',
+        'SM' => 'San Marino',
+        'ST' => 'Sao Tome and Principe',
+        'SA' => 'Saudi Arabia',
+        'SN' => 'Senegal',
+        'RS' => 'Serbia',
+        'SC' => 'Seychelles',
+        'SL' => 'Sierra Leone',
+        'SG' => 'Singapore',
+        'SX' => 'Sint Maarten (Dutch part)',
+        'SK' => 'Slovakia',
+        'SI' => 'Slovenia',
+        'SB' => 'Solomon Islands',
+        'SO' => 'Somalia',
+        'ZA' => 'South Africa',
+        'GS' => 'South Georgia and the South Sandwich Islands',
+        'SS' => 'South Sudan',
+        'ES' => 'Spain',
+        'LK' => 'Sri Lanka',
+        'SD' => 'Sudan',
+        'SR' => 'Suriname',
+        'SJ' => 'Svalbard and Jan Mayen',
+        'SE' => 'Sweden',
+        'CH' => 'Switzerland',
+        'SY' => 'Syrian Arab Republic',
+        'TW' => 'Taiwan, Province of China',
+        'TJ' => 'Tajikistan',
+        'TZ' => 'Tanzania, United Republic of',
+        'TH' => 'Thailand',
+        'TL' => 'Timor-Leste',
+        'TG' => 'Togo',
+        'TK' => 'Tokelau',
+        'TO' => 'Tonga',
+        'TT' => 'Trinidad and Tobago',
+        'TN' => 'Tunisia',
+        'TR' => 'Turkey',
+        'TM' => 'Turkmenistan',
+        'TC' => 'Turks and Caicos Islands',
+        'TV' => 'Tuvalu',
+        'UG' => 'Uganda',
+        'UA' => 'Ukraine',
+        'AE' => 'United Arab Emirates',
+        'GB' => 'United Kingdom',
+        'US' => 'United States',
+        'UM' => 'United States Minor Outlying Islands',
+        'UY' => 'Uruguay',
+        'UZ' => 'Uzbekistan',
+        'VU' => 'Vanuatu',
+        'VE' => 'Venezuela (Bolivarian Republic of)',
+        'VN' => 'Viet Nam',
+        'VG' => 'Virgin Islands (British)',
+        'VI' => 'Virgin Islands (U.S.)',
+        'WF' => 'Wallis and Futuna',
+        'EH' => 'Western Sahara',
+        'YE' => 'Yemen',
+        'ZM' => 'Zambia',
+        'ZW' => 'Zimbabwe',
+    );
+}
+
+// Function to display the banner container based on country
+function geo_banners_shortcode_custom() {
+    if (get_option('geo_banners_active') != '1') {
+        return ''; // Do not display anything if the banner is not active
+    }
+
+    $banner_image = get_option('geo_banners_image');
+    $allowed_countries = get_option('geo_banners_allowed_countries', array()); // Get allowed countries
+
+    // GeoIP2 Integration: Get user's country code from the GeoIP2 plugin
+    if (function_exists('geoip_detect2_get_info_from_current_ip')) {
+        $location = geoip_detect2_get_info_from_current_ip();
+        $user_country = $location->raw['country']['iso_code'];
+    } else {
+        $user_country = ''; // Default if plugin is not available
+    }
+
+    // Check if user's country is in the allowed countries list
+    if (in_array($user_country, $allowed_countries)) {
+        if ($banner_image) {
+            return '<div id="geo-banner" class="geo-banner" style="display:none;">
+                        <img src="' . esc_url($banner_image) . '" alt="Geo Banner" />
+                    </div>';
+        }
+    }
+    return ''; // Return nothing if no banner is set or country is not allowed
+}
+add_shortcode('geo_banner_custom', 'geo_banners_shortcode_custom');
+
+// Site-wide banner display if enabled
+function geo_banners_site_wide_display_custom() {
+    // Check if site-wide display is enabled and add the shortcode content at the top of the page
+    if (get_option('geo_banners_site_wide') == '1') {
+        echo do_shortcode('[geo_banner_custom]');
+    }
+}
+add_action('wp_head', 'geo_banners_site_wide_display_custom');
+
+// Enqueue front-end CSS and JS files with cache-busting versions, and inject custom CSS
+function geo_banners_enqueue_styles_scripts() {
+    $css_version = filemtime(plugin_dir_path(__FILE__) . 'css/geo-banner-styles.css');
+    $js_version = filemtime(plugin_dir_path(__FILE__) . 'js/geo-banner.js');
+
+    wp_enqueue_style('geo-banner-styles', plugins_url('/css/geo-banner-styles.css', __FILE__), array(), $css_version);
+    wp_enqueue_script('geo-banner-scripts', plugins_url('/js/geo-banner.js', __FILE__), array('jquery'), $js_version, true);
+
+    // Inject custom CSS for .geo-banner img and .geo-banner
+    $custom_css_img = get_option('geo_banners_custom_css', '');
+    $custom_css_container = get_option('geo_banners_container_css', '');
+    if (!empty($custom_css_img) || !empty($custom_css_container)) {
+        echo '<style type="text/css">';
+        if (!empty($custom_css_container)) {
+            echo ".geo-banner { " . wp_strip_all_tags($custom_css_container) . " }";
+        }
+        if (!empty($custom_css_img)) {
+            echo ".geo-banner img { " . wp_strip_all_tags($custom_css_img) . " }";
+        }
+        echo '</style>';
+    }
+}
+add_action('wp_enqueue_scripts', 'geo_banners_enqueue_styles_scripts');
+
+// Admin page for managing the banner settings
+function geo_banners_menu_custom() {
+    add_menu_page('Geo Banners', 'Geo Banners', 'manage_options', 'geo-banners', 'geo_banners_page_custom', 'dashicons-flag', 100);
+}
+add_action('admin_menu', 'geo_banners_menu_custom');
+
+// Admin page content
+function geo_banners_page_custom() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    if (isset($_POST['submit'])) {
+        check_admin_referer('geo_banners_nonce');
+        update_option('geo_banners_active', isset($_POST['geo_banners_active']) ? '1' : '0');
+        update_option('geo_banners_site_wide', isset($_POST['geo_banners_site_wide']) ? '1' : '0');
+        update_option('geo_banners_image', esc_url($_POST['geo_banners_image']));
+        update_option('geo_banners_allowed_countries', $_POST['geo_banners_allowed_countries'] ?? array()); // Save selected countries
+        $custom_css_img = wp_strip_all_tags($_POST['geo_banners_custom_css']);
+        $custom_css_container = wp_strip_all_tags($_POST['geo_banners_container_css']);
+        update_option('geo_banners_custom_css', $custom_css_img);
+        update_option('geo_banners_container_css', $custom_css_container);
+        echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
+    }
+
+    $banner_active = get_option('geo_banners_active', '0');
+    $banner_site_wide = get_option('geo_banners_site_wide', '0');
+    $banner_image = get_option('geo_banners_image', '');
+    $custom_css_img = get_option('geo_banners_custom_css', '');
+    $custom_css_container = get_option('geo_banners_container_css', '');
+    $allowed_countries = get_option('geo_banners_allowed_countries', array());
+
+    ?>
+    <div class="wrap geo-banners-settings">
+        <h1>🌍 Geo Banners <small style="font-size: 16px; color: #777;"></small></h1>
+        <div class="geo-banners-container">
+            <div class="geo-banners-left">
+                <form method="post" action="">
+                    <?php wp_nonce_field('geo_banners_nonce'); ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Banner Configuration</th>
+                            <td><input type="checkbox" name="geo_banners_active" value="1" <?php checked($banner_active, '1'); ?> />
+                            <label for="geo_banners_active">Enable the functionality of the banner</label></td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Site-wide Display</th>
+                            <td><input type="checkbox" name="geo_banners_site_wide" value="1" <?php checked($banner_site_wide, '1'); ?> />
+                            <label for="geo_banners_site_wide">Show banner site-wide (on all pages and posts)</label></td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Select Banner</th>
+                            <td>
+                                <input type="hidden" id="geo_banners_image" name="geo_banners_image" value="<?php echo esc_url($banner_image); ?>" />
+                                <button class="button button-primary" id="upload_image_button">Select | Upload Image</button>
+                                <p><img id="geo_banners_image_preview" src="<?php echo esc_url($banner_image); ?>" style="max-width: 300px; display: <?php echo $banner_image ? 'block' : 'none'; ?>;" /></p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Custom CSS for <strong>.geo-banner img</strong></th>
+                            <td>
+                                <textarea name="geo_banners_custom_css" rows="4" style="width: 100%;" placeholder="Do not type opening or closing tags"><?php echo esc_textarea($custom_css_img); ?></textarea>
+                                <p>Styles will be applied to <strong>Banner Image</strong> automatically.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Custom CSS for <strong>.geo-banner</strong></th>
+                            <td>
+                                <textarea name="geo_banners_container_css" rows="4" style="width: 100%;" placeholder="Do not type opening or closing tags"><?php echo esc_textarea($custom_css_container); ?></textarea>
+                                <p>Styles will be applied to <strong>Container</strong> automatically.</p>
+                            </td>
+                        </tr>
+<tr valign="top">
+    <th scope="row">Countries to Display Banner</th>
+    <td>
+        <select name="geo_banners_allowed_countries[]" multiple="multiple" style="width: 100%; height: 150px;">
+            <?php
+            $countries = geo_banners_get_countries();
+            $allowed_countries = is_array($allowed_countries) ? $allowed_countries : array(); // Ensure it's always an array
+            foreach ($countries as $country_code => $country_name) {
+                echo '<option value="' . esc_attr($country_code) . '" ' . (in_array($country_code, $allowed_countries) ? 'selected="selected"' : '') . '>' . esc_html($country_name) . '</option>';
+            }
+            ?>
+        </select>
+    <p>You can make a single selection, or hold down the Shift or Ctrl key while clicking to choose multiple locations where the banner should be displayed.</p>
+    </td>
+</tr>
+
+                    </table>
+                    <?php submit_button('Save Changes'); ?>
+                </form>
+            </div>
+
+            <div class="geo-banners-right">
+                <!-- Instructions Box -->
+                <div class="geo-instructions-box" style="border: 1px solid #ddd; padding: 15px; border-radius: 10px; background-color: #f9f9f9;">
+                    <h2>How to Use</h2>
+                    <p>To use this plugin, enable the banner by checking the "Enable the banner" option.</p>
+                    <p>To display the banner site-wide, check the "Show banner site-wide" option.</p>
+                    <p>If you want to use the banner only on specific pages or posts, use the following shortcode:</p>
+                    <div style="width: auto; border: 1px solid #ccc; padding: 10px; border-radius: 8px; background-color: #d1d2f5;">
+                        <center><code>[geo_banner_custom]</code></center>
+                    </div>
+                </div>
+                <!-- IP and Location Box -->
+                <div class="geo-location-box" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; background-color: #f9f9f9;">
+                    <h2>Your IP and Location</h2>
+                    <?php
+                    $geoip_plugin_slug = 'geoip-detect/geoip-detect.php'; // Plugin slug
+                    $geoip_plugin_url = 'https://downloads.wordpress.org/plugin/geoip-detect.latest-stable.zip'; // Plugin download URL
+
+                    // Check if the GeoIP plugin is active
+                    if (is_plugin_active($geoip_plugin_slug)) :
+                        $location = geoip_detect2_get_info_from_current_ip();
+                        ?>
+                        <p>The IP address <strong><?php echo esc_html($location->raw['traits']['ip_address']); ?></strong>
+                            has been resolved to <strong><?php echo esc_html($location->raw['country']['names']['en']); ?>.</strong></p>
+
+                        <!-- Informational Message and Configure Button (only shown if GeoIP plugin is active) -->
+                        <div style="margin-top: 15px;">
+                            <p>Not your IP &amp; Country? If you are behind a proxy or your website is using Cloudflare, you'll need to configure the settings of Geo IP.</p>
+                            <a href="<?php echo esc_url('/wp-admin/options-general.php?page=geoip-detect%2Fgeoip-detect.php'); ?>"
+                               class="button"
+                               style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
+                                Configure
+                            </a>
+                        </div>
+                    <?php elseif (file_exists(WP_PLUGIN_DIR . '/' . $geoip_plugin_slug)) : ?>
+                        <!-- If the plugin is installed but not active, show Activate button -->
+                        <div style="margin-top: 15px;">
+                            <p>The GeoIP plugin is installed but not activated.</p>
+                        </div>
+                    <?php else : ?>
+                        <!-- If the plugin is not installed, show Install button -->
+                        <p>GeoIP plugin is not installed.</p>
+                            <a href="<?php echo esc_url('https://friendlystranger.gr/wp-admin/update.php?action=install-plugin&plugin=geoip-detect&_wpnonce=ed79ed717a'); ?>"
+                               class="button"
+                               style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
+                                Install
+                            </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
+function geo_banners_add_tawkto_script() {
+    ?>
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+        s1.async=true;
+        s1.src='https://embed.tawk.to/5e3a11ea298c395d1ce63df2/default';
+        s1.charset='UTF-8';
+        s1.setAttribute('crossorigin','*');
+        s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <?php
+}
+
+// Enqueue Admin CSS and JS only for the Geo Banners admin page
+function geo_banners_admin_enqueue_scripts($hook) {
+    // Verify the hook to ensure it runs only on 'toplevel_page_geo-banners'
+    if ($hook !== 'toplevel_page_geo-banners') {
+        return;
+    }
+
+    // Enqueue CSS and JS for the specific page
+    wp_enqueue_style('geo-banners-admin-css', plugins_url('/css/admin.css', __FILE__), array(), filemtime(plugin_dir_path(__FILE__) . 'css/admin.css'));
+    wp_enqueue_script('geo-banners-admin-js', plugins_url('/js/admin.js', __FILE__), array('jquery'), filemtime(plugin_dir_path(__FILE__) . 'js/admin.js'), true);
+
+    // Enqueue WordPress media uploader
+    wp_enqueue_media();
+
+    geo_banners_add_tawkto_script(); 
+}
+add_action('admin_enqueue_scripts', 'geo_banners_admin_enqueue_scripts');
