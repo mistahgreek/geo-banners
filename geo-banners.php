@@ -2,12 +2,14 @@
 /*
 Plugin Name: Geo Banners
 Description: Display banners based on user geolocation using AJAX and shortcode or site-wide option.
-Version: 3.0.5
+Version: 1.0.0
 Author: Peter Panagiotis Floros
 Author URI: https://tawk.to/isodos
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
 
-define('GEO_BANNERS_VERSION', '3.0.5');
+define('GEO_BANNERS_VERSION', '1.0.0');
 
 // List of countries
 function geo_banners_get_countries() {
@@ -278,7 +280,7 @@ function geo_banners_shortcode_custom() {
     // Get the user's country code using the GeoIP plugin
     if (function_exists('geoip_detect2_get_info_from_current_ip')) {
         $location = geoip_detect2_get_info_from_current_ip();
-        $user_country = $location->raw['country']['iso_code'];
+        $user_country = isset($location->raw['country']['iso_code']) ? $location->raw['country']['iso_code'] : '';
     } else {
         $user_country = ''; // Default country code if GeoIP is not available
     }
@@ -319,37 +321,54 @@ function geo_banners_shortcode_custom() {
 
     return ''; // Return nothing if the user's country is not allowed
 }
-add_shortcode('geo_banner_custom', 'geo_banners_shortcode_custom');
+add_shortcode('geo_banner', 'geo_banners_shortcode_custom');
 
-// Site-wide banner display if enabled
+// Function to display the banner site-wide if enabled
 function geo_banners_site_wide_display_custom() {
     // Check if site-wide display is enabled and add the shortcode content at the top of the page
     if (get_option('geo_banners_site_wide') == '1') {
-        echo do_shortcode('[geo_banner_custom]');
+        echo do_shortcode('[geo_banner]');
     }
 }
 add_action('wp_head', 'geo_banners_site_wide_display_custom');
 
 // Enqueue front-end CSS and JS files
 function geo_banners_enqueue_styles_scripts() {
-    $css_version = filemtime(plugin_dir_path(__FILE__) . 'css/geo-banner-styles.css');
-    $js_version = filemtime(plugin_dir_path(__FILE__) . 'js/geo-banner.js');
+    global $post;
 
-    // Enqueue CSS and JS files
-    wp_enqueue_style('geo-banner-styles', plugins_url('/css/geo-banner-styles.css', __FILE__), array(), $css_version);
-    wp_enqueue_script('geo-banner-scripts', plugins_url('/js/geo-banner.js', __FILE__), array('jquery'), $js_version, true);
+    // Ensure we are in a proper page context to check content
+    if (is_a($post, 'WP_Post')) {
+        // Check if the post has the shortcode [geo_banner] in its content
+        $has_shortcode = has_shortcode($post->post_content, 'geo_banner');
+    } else {
+        $has_shortcode = false;
+    }
 
-    // Prepare data to pass to JavaScript
-    $allowed_countries = implode(',', get_option('geo_banners_allowed_countries', array('US', 'GR'))); // Default to US and GR if not set
-    $banner_link = get_option('geo_banners_image_link', '#');
+    // Load CSS and JS only when the banner is active, site-wide display is enabled, or the shortcode is present
+    if (get_option('geo_banners_active') == '1' || get_option('geo_banners_site_wide') == '1' || $has_shortcode) {
+        // Enqueue the CSS file if it's needed
+        $css_version = filemtime(plugin_dir_path(__FILE__) . 'css/geo-banner-styles.css');
+        wp_enqueue_style('geo-banner-styles', plugins_url('/css/geo-banner-styles.css', __FILE__), array(), $css_version);
 
-    // Localize the script (pass PHP variables to JavaScript)
-    wp_localize_script('geo-banner-scripts', 'geo_banner_data', array(
-        'allowed_countries' => $allowed_countries,
-        'banner_link' => $banner_link,
-    ));
+        // Enqueue the JS file if it's needed
+        $js_version = filemtime(plugin_dir_path(__FILE__) . 'js/geo-banner.js');
+        wp_enqueue_script('geo-banner-scripts', plugins_url('/js/geo-banner.js', __FILE__), array('jquery'), $js_version, true);
+
+        // Ensure the JavaScript loads asynchronously to avoid blocking
+        add_filter('script_loader_tag', 'add_defer_and_async_attributes', 10, 2);
+    }
 }
 add_action('wp_enqueue_scripts', 'geo_banners_enqueue_styles_scripts');
+
+// Add async and defer attributes to the geo-banner.js script
+function add_defer_and_async_attributes($tag, $handle) {
+    if ('geo-banner-scripts' === $handle) {
+        return str_replace('src', 'async="async" defer="defer" src', $tag);
+    }
+    return $tag;
+}
+
+
 
 // Admin page for managing the banner settings
 function geo_banners_menu_custom() {
@@ -363,61 +382,102 @@ function geo_banners_page_custom() {
         return;
     }
 
+    // Check if the form has been submitted and handle the updates
     if (isset($_POST['submit'])) {
         check_admin_referer('geo_banners_nonce');
-        update_option('geo_banners_active', isset($_POST['geo_banners_active']) ? '1' : '0');
-        update_option('geo_banners_site_wide', isset($_POST['geo_banners_site_wide']) ? '1' : '0');
-        update_option('geo_banners_image', esc_url($_POST['geo_banners_image']));
-        update_option('geo_banners_mobile_image', esc_url($_POST['geo_banners_mobile_image'])); // Save mobile image
-        update_option('geo_banners_image_link', esc_url($_POST['geo_banners_image_link'])); // Save image link
-        update_option('geo_banners_allowed_countries', $_POST['geo_banners_allowed_countries'] ?? array()); // Save selected countries
-        $custom_css_img = wp_strip_all_tags($_POST['geo_banners_custom_css']);
-        $custom_css_container = wp_strip_all_tags($_POST['geo_banners_container_css']);
-        update_option('geo_banners_custom_css', $custom_css_img);
-        update_option('geo_banners_container_css', $custom_css_container);
+
+        // Sanitize and update options
+        if (isset($_POST['geo_banners_active'])) {
+            update_option('geo_banners_active', '1');
+        } else {
+            update_option('geo_banners_active', '0');
+        }
+
+        if (isset($_POST['geo_banners_site_wide'])) {
+            update_option('geo_banners_site_wide', '1');
+        } else {
+            update_option('geo_banners_site_wide', '0');
+        }
+
+        if (isset($_POST['geo_banners_image'])) {
+            $geo_banners_image = sanitize_text_field(wp_unslash($_POST['geo_banners_image']));
+            update_option('geo_banners_image', esc_url($geo_banners_image));
+        }
+
+        if (isset($_POST['geo_banners_mobile_image'])) {
+            $geo_banners_mobile_image = sanitize_text_field(wp_unslash($_POST['geo_banners_mobile_image']));
+            update_option('geo_banners_mobile_image', esc_url($geo_banners_mobile_image));
+        }
+
+        if (isset($_POST['geo_banners_image_link'])) {
+            $geo_banners_image_link = sanitize_text_field(wp_unslash($_POST['geo_banners_image_link']));
+            update_option('geo_banners_image_link', esc_url($geo_banners_image_link));
+        }
+
+        if (isset($_POST['geo_banners_allowed_countries'])) {
+            $geo_banners_allowed_countries = array_map('sanitize_text_field', wp_unslash($_POST['geo_banners_allowed_countries']));
+            update_option('geo_banners_allowed_countries', $geo_banners_allowed_countries);
+        }
+
+        if (isset($_POST['geo_banners_custom_css'])) {
+            $geo_banners_custom_css = sanitize_text_field(wp_unslash($_POST['geo_banners_custom_css']));
+            update_option('geo_banners_custom_css', $geo_banners_custom_css);
+        }
+
+        if (isset($_POST['geo_banners_container_css'])) {
+            $geo_banners_container_css = sanitize_text_field(wp_unslash($_POST['geo_banners_container_css']));
+            update_option('geo_banners_container_css', $geo_banners_container_css);
+        }
+
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
     }
 
+    // Fetch stored options to display in the form
     $banner_active = get_option('geo_banners_active', '0');
     $banner_site_wide = get_option('geo_banners_site_wide', '0');
     $banner_image = get_option('geo_banners_image', '');
-    $banner_mobile_image = get_option('geo_banners_mobile_image', ''); // Fetch mobile image
-    $banner_link = get_option('geo_banners_image_link', ''); // Fetch image link
+    $banner_mobile_image = get_option('geo_banners_mobile_image', '');
+    $banner_link = get_option('geo_banners_image_link', '');
+    $allowed_countries = get_option('geo_banners_allowed_countries', array());
     $custom_css_img = get_option('geo_banners_custom_css', '');
     $custom_css_container = get_option('geo_banners_container_css', '');
-    $allowed_countries = get_option('geo_banners_allowed_countries', array());
 
+    // Output the admin page HTML
     ?>
     <div class="wrap geo-banners-settings">
-        <h1>🌍 Geo Banners <small style="font-size: 16px; color: #777;"></small></h1>
+        <h1>🌍 Geo Banners Settings</h1>
         <div class="geo-banners-container">
             <div class="geo-banners-left">
                 <form method="post" action="">
                     <?php wp_nonce_field('geo_banners_nonce'); ?>
                     <table class="form-table">
                         <tr valign="top">
-                            <th scope="row">Banner Configuration</th>
-                            <td><input type="checkbox" name="geo_banners_active" value="1" <?php checked($banner_active, '1'); ?> />
-                            <label for="geo_banners_active">Enable the functionality of the banner</label></td>
+                            <th scope="row">Enable Geo Banner</th>
+                            <td>
+                                <input type="checkbox" name="geo_banners_active" value="1" <?php checked($banner_active, '1'); ?> />
+                                <label for="geo_banners_active">Enable banner functionality</label>
+                            </td>
                         </tr>
                         <tr valign="top">
-                            <th scope="row">Site-wide Display</th>
-                            <td><input type="checkbox" name="geo_banners_site_wide" value="1" <?php checked($banner_site_wide, '1'); ?> />
-                            <label for="geo_banners_site_wide">Show banner site-wide (on all pages and posts)</label></td>
+                            <th scope="row">Site-wide Banner</th>
+                            <td>
+                                <input type="checkbox" name="geo_banners_site_wide" value="1" <?php checked($banner_site_wide, '1'); ?> />
+                                <label for="geo_banners_site_wide">Display banner on all pages site-wide</label>
+                            </td>
                         </tr>
                         <tr valign="top">
-                            <th scope="row">Select Desktop Banner</th>
+                            <th scope="row">Desktop Banner Image</th>
                             <td>
                                 <input type="hidden" id="geo_banners_image" name="geo_banners_image" value="<?php echo esc_url($banner_image); ?>" />
-                                <button class="button button-primary" id="upload_image_button">Select | Upload Image</button>
+                                <button class="button button-primary" id="upload_image_button">Select Desktop Image</button>
                                 <p><img id="geo_banners_image_preview" src="<?php echo esc_url($banner_image); ?>" style="max-width: 300px; display: <?php echo $banner_image ? 'block' : 'none'; ?>;" /></p>
                             </td>
                         </tr>
                         <tr valign="top">
-                            <th scope="row">Select Mobile Banner</th>
+                            <th scope="row">Mobile Banner Image</th>
                             <td>
                                 <input type="hidden" id="geo_banners_mobile_image" name="geo_banners_mobile_image" value="<?php echo esc_url($banner_mobile_image); ?>" />
-                                <button class="button button-primary" id="upload_mobile_image_button">Select | Upload Mobile Image</button>
+                                <button class="button button-primary" id="upload_mobile_image_button">Select Mobile Image</button>
                                 <p><img id="geo_banners_mobile_image_preview" src="<?php echo esc_url($banner_mobile_image); ?>" style="max-width: 300px; display: <?php echo $banner_mobile_image ? 'block' : 'none'; ?>;" /></p>
                             </td>
                         </tr>
@@ -425,21 +485,6 @@ function geo_banners_page_custom() {
                             <th scope="row">Banner Link URL</th>
                             <td>
                                 <input type="url" name="geo_banners_image_link" value="<?php echo esc_url($banner_link); ?>" style="width: 100%;" />
-                                <p>Enter the URL where the banner should link to.</p>
-                            </td>
-                        </tr>
-                        <tr valign="top">
-                            <th scope="row">Custom CSS for <strong>.geo-banner img</strong></th>
-                            <td>
-                                <textarea name="geo_banners_custom_css" rows="4" style="width: 100%;" placeholder="Enter CSS styles here..."><?php echo esc_textarea($custom_css_img); ?></textarea>
-                                <p>Styles will be applied to <strong>Banner Image</strong> automatically.</p>
-                            </td>
-                        </tr>
-                        <tr valign="top">
-                            <th scope="row">Custom CSS for <strong>.geo-banner</strong></th>
-                            <td>
-                                <textarea name="geo_banners_container_css" rows="4" style="width: 100%;" placeholder="Enter CSS styles for the container..."><?php echo esc_textarea($custom_css_container); ?></textarea>
-                                <p>Styles will be applied to <strong>Container</strong> automatically.</p>
                             </td>
                         </tr>
                         <tr valign="top">
@@ -448,16 +493,16 @@ function geo_banners_page_custom() {
                                 <select name="geo_banners_allowed_countries[]" multiple="multiple" style="width: 100%; height: 150px;">
                                     <?php
                                     $countries = geo_banners_get_countries();
-                                    $allowed_countries = is_array($allowed_countries) ? $allowed_countries : array(); // Ensure it's always an array
                                     foreach ($countries as $country_code => $country_name) {
                                         echo '<option value="' . esc_attr($country_code) . '" ' . (in_array($country_code, $allowed_countries) ? 'selected="selected"' : '') . '>' . esc_html($country_name) . '</option>';
                                     }
                                     ?>
                                 </select>
-                                <p>You can make a single selection, or hold down the Shift or Ctrl key while clicking to choose multiple locations where the banner should be displayed.</p>
+                                <p>Hold Shift or Ctrl to select multiple countries.</p>
                             </td>
                         </tr>
                     </table>
+                    
                     <?php submit_button('Save Changes'); ?>
                 </form>
             </div>
@@ -469,49 +514,58 @@ function geo_banners_page_custom() {
                     <p>To use this plugin, enable the banner by checking the "Enable the banner" option.</p>
                     <p>To display the banner site-wide, check the "Show banner site-wide" option.</p>
                     <p>If you want to use the banner only on specific pages or posts, use the following shortcode:</p>
-                    <div style="width: auto; border: 1px solid #ccc; padding: 10px; border-radius: 8px; background-color: #d1d2f5;">
-                        <center><code>[geo_banner_custom]</code></center>
+                    <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-top: 20px;">
+                        <!-- Shortcode box for copying the shortcode -->
+                        <div id="shortcode-box" style="display: inline-block; background-color: #d1d2f5; padding: 10px; border-radius: 8px; cursor: pointer;" onclick="copyShortcode()">
+                            <code id="shortcode-text">[geo_banner]</code>
+                        </div>
+                        <p id="copy-message" style="color: green; display: none; margin-top: 10px;">✔️ Shortcode has been copied to clipboard</p>
                     </div>
                 </div>
+
                 <!-- IP and Location Box -->
                 <div class="geo-location-box" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; background-color: #f9f9f9;">
                     <h2>Your IP and Location</h2>
                     <?php
-                    $geoip_plugin_slug = 'geoip-detect/geoip-detect.php'; // Plugin slug
-                    $geoip_plugin_url = 'https://downloads.wordpress.org/plugin/geoip-detect.latest-stable.zip'; // Plugin download URL
+                    $geoip_plugin_slug = 'geoip-detect/geoip-detect.php';
+                    $geoip_plugin_url = 'https://downloads.wordpress.org/plugin/geoip-detect.latest-stable.zip';
 
-                    // Check if the GeoIP plugin is active
                     if (is_plugin_active($geoip_plugin_slug)) :
                         $location = geoip_detect2_get_info_from_current_ip();
                         ?>
-                        <p>The IP address <strong><?php echo esc_html($location->raw['traits']['ip_address']); ?></strong>
-                            has been resolved to <strong><?php echo esc_html($location->raw['country']['names']['en']); ?>.</strong></p>
+                        <p>The IP address <strong><?php echo esc_html($location->raw['traits']['ip_address']); ?></strong> has been resolved to <strong><?php echo esc_html($location->raw['country']['names']['en']); ?>.</strong></p>
 
-                        <!-- Informational Message and Configure Button (only shown if GeoIP plugin is active) -->
                         <div style="margin-top: 15px;">
-                            <p>Not your IP &amp; Country? If you are behind a proxy or your website is using Cloudflare, you'll need to configure the settings of Geo IP.</p>
-                            <a href="<?php echo esc_url('/wp-admin/options-general.php?page=geoip-detect%2Fgeoip-detect.php'); ?> "
-                               class="button"
-                               style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
+                            <p>Not your IP & Country? If you are behind a proxy or your website is using Cloudflare, you'll need to configure the settings of Geo IP.</p>
+                            <a href="<?php echo esc_url('/wp-admin/options-general.php?page=geoip-detect%2Fgeoip-detect.php'); ?> " class="button" style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
                                 Configure
                             </a>
                         </div>
                     <?php elseif (file_exists(WP_PLUGIN_DIR . '/' . $geoip_plugin_slug)) : ?>
-                        <!-- If the plugin is installed but not active, show Activate button -->
                         <div style="margin-top: 15px;">
                             <p>The GeoIP plugin is installed but not activated.</p>
                         </div>
                     <?php else : ?>
-                        <!-- If the plugin is not installed, show Install button -->
                         <p>GeoIP plugin is not installed.</p>
-                        <a href="<?php echo esc_url($geoip_plugin_url); ?>"
-                           class="button"
-                           style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
+                        <a href="<?php echo esc_url($geoip_plugin_url); ?>" class="button" style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
                             Install
                         </a>
                     <?php endif; ?>
                 </div>
-            </div>
+                <!-- Advise Box -->
+                <div class="geo-suggestion-box" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; background-color: #f9f9f9;">
+                    <h2>Have a Suggestion for Improvement?</h2>
+                    <p>If you have any suggestions or feedback regarding the Geo Banners plugin, I would like to hear from you.</p>
+
+                    <div style="margin-top: 15px;">
+                        <a href="mailto:peter@isodos.ca?subject=Geo%20Banners%20Suggestion&body=Hi,%20I%20have%20the%20following%20suggestion%20for%20the%20plugin:%20"
+                           class="button" 
+                           style="display: inline-block; padding: 10px 20px; background-color: #0073aa; color: #fff; text-decoration: none; border-radius: 5px;">
+                           Email a Suggestion
+                        </a>
+                    </div>
+                </div>
+             </div>
         </div>
     </div>
     <?php
@@ -536,19 +590,14 @@ function geo_banners_add_tawkto_script() {
 
 // Enqueue Admin CSS and JS only for the Geo Banners admin page
 function geo_banners_admin_enqueue_scripts($hook) {
-    // Verify the hook to ensure it runs only on 'toplevel_page_geo-banners'
     if ($hook !== 'toplevel_page_geo-banners') {
         return;
     }
 
-    // Enqueue CSS and JS for the specific page
     wp_enqueue_style('geo-banners-admin-css', plugins_url('/css/admin.css', __FILE__), array(), filemtime(plugin_dir_path(__FILE__) . 'css/admin.css'));
     wp_enqueue_script('geo-banners-admin-js', plugins_url('/js/admin.js', __FILE__), array('jquery'), filemtime(plugin_dir_path(__FILE__) . 'js/admin.js'), true);
-
-    // Enqueue WordPress media uploader
     wp_enqueue_media();
 
-    // Load Tawk.to script for this page only by calling the function directly
-    geo_banners_add_tawkto_script();  // This ensures the script runs only on this page
+    geo_banners_add_tawkto_script();
 }
 add_action('admin_enqueue_scripts', 'geo_banners_admin_enqueue_scripts');
